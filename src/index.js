@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import * as serviceWorker from './serviceWorker';
-import { BrowserRouter, Route,Switch,Redirect } from 'react-router-dom';
+import {BrowserRouter, Route, Switch, Redirect} from 'react-router-dom';
 import Login from "./Login/login";
 import {isUser} from './Services/Auth'
 
@@ -13,20 +13,22 @@ ReactDOM.render(
 
         <Switch>
 
-            <Route exact path="/" render={()=>{
+            <Route exact path="/" render={() => {
                 if (isUser()) {
                     return <Redirect to='/dashboard'/>
-            } else {
+                } else {
                     return <Login/>
-                }}}/>
+                }
+            }}/>
 
-            <Route exact path="/dashboard" render = {()=>{
+            <Route exact path="/dashboard" render={() => {
 
                 if (isUser()) {
                     return <OrderDashBoard/>
                 } else {
                     return <Redirect to='/'/>
-                }}}/>
+                }
+            }}/>
 
             }}/>
 

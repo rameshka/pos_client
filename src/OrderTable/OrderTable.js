@@ -1,17 +1,25 @@
-import React,{ Component } from 'react'
-import { Table } from 'semantic-ui-react'
+import React, {Component} from 'react'
+import {Table} from 'semantic-ui-react'
 import "./OrderTable.css";
 
-
 export default class OrderTable extends Component {
-    state = {
-        response:''
+    constructor(props) {
+        super(props);
+        this.state =
+            {
+                rows: [
+                    {id: 1, name: 'Gob', value: '2'},
+                    {id: 2, name: 'Buster', value: '5'},
+                    {id: 3, name: 'George Michael', value: '4'}
+                ]
+            }
     }
 
     componentDidMount() {
-        this.callApi()
-            .then(res => this.setState({ response: res.express }))
-            .catch(err => console.log(err));
+        /* this.callApi()
+             .then(res => this.setState({ itemData:res.orders}))
+             .catch(err => console.log(err));
+             */
     }
 
     //use to fetch open orders from the server
@@ -24,7 +32,7 @@ export default class OrderTable extends Component {
 
     render() {
         return (
-            <Table celled inverted selectable className="table-margin">
+            <Table celled selectable className="table-margin"  >
                 <Table.Header>
                     <Table.Row textAlign='center'>
                         <Table.HeaderCell>Order Number</Table.HeaderCell>
@@ -33,22 +41,19 @@ export default class OrderTable extends Component {
                     </Table.Row>
                 </Table.Header>
 
-                <Table.Body>
-                    <Table.Row textAlign='center'>
-                        <Table.Cell>John</Table.Cell>
-                        <Table.Cell>Approved</Table.Cell>
-                        <Table.Cell>None</Table.Cell>
-                    </Table.Row>
-                    <Table.Row textAlign='center'>
-                        <Table.Cell>Jamie</Table.Cell>
-                        <Table.Cell>Approved</Table.Cell>
-                        <Table.Cell>Requires call</Table.Cell>
-                    </Table.Row>
-                    <Table.Row textAlign='center'>
-                        <Table.Cell>Jill</Table.Cell>
-                        <Table.Cell>Denied</Table.Cell>
-                        <Table.Cell>None</Table.Cell>
-                    </Table.Row>
+                <Table.Body >
+                    {this.state.itemData.map(rows => <Table.Row key={rows.id} >
+                        <Table.Cell collapsing >
+                            {rows.id}
+                        </Table.Cell>
+                        <Table.Cell >
+                            {rows.name}
+                        </Table.Cell>
+                        <Table.Cell textAlign='center'>
+                           {rows.value}
+                        </Table.Cell>
+                    </Table.Row>)}
+
                 </Table.Body>
             </Table>
         )

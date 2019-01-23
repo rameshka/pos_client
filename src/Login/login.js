@@ -11,7 +11,7 @@ export default class Login extends Component {
         this.state = {
             response: '',
             username:'rameshkafox@gmail.com',
-            password:1234
+            password:'1234'
         };
 
     }
@@ -35,7 +35,7 @@ export default class Login extends Component {
             //view error
         }
 
-    }
+    };
 
     render() {
         return (
@@ -53,6 +53,7 @@ export default class Login extends Component {
         height: 100%;
       }
     `}</style>
+
                 <Grid textAlign='center' style={{ height: '100%' }} verticalAlign='middle'>
                     <Grid.Column style={{ maxWidth: 450 }}>
                         <Header as='h2' color='teal' textAlign='center'>
