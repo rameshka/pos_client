@@ -17,7 +17,6 @@ var divStyle = {
 };
 
 export default class Order extends Component {
-
     constructor(props) {
         super(props);
         this.state =
@@ -33,27 +32,34 @@ export default class Order extends Component {
             };
 
         this.handleItemChange = this.handleItemChange.bind(this);
-        this.handleQuantityChange = this.handleQuantityChange.bind(this);
+        this.handleCostChange = this.handleCostChange.bind(this);
         this.addToOrder = this.addToOrder.bind(this);
-        this.createOrder =  this.createOrder.bind(this);
+        this.createOrder = this.createOrder.bind(this);
+        this.handleItemDelete = this.handleItemDelete.bind(this);
+        this.acceptQuantityChange = this.acceptQuantityChange.bind(this);
     }
 
+    //redundant
     componentDidMount() {
         this.fetchData()
             .then(res => this.setState({itemData: res}))
             .catch(err => console.log(err));
+
+        if (this.props.orderData.items) {
+            this.setState({itemList: this.props.orderData.items});
+            this.setState({totalOrderCost: this.props.orderData.cost});
+        }
     }
 
     //fetch data from the server
     fetchData = async () => {
-        const response = await fetch('/orderData', {
+        const response = await fetch('/itemData', {
             method: 'GET',
             headers: {
                 'Authorization': window.localStorage.getItem('authToken'),
             },
         });
         const body = await response.json();
-
         if (!body.success) {
             window.localStorage.removeItem('authToken');
             history.push('/login');
@@ -65,16 +71,14 @@ export default class Order extends Component {
     //set price for each item depending on dropdown selection
     handleItemChange = (e, value) => {
         this.setState({name: value.value}, this.getPrice);
-
     };
 
     addToOrder = () => {
-
         var item = {
             name: this.state.name,
             price: this.state.price,
             quantity: this.state.quantity,
-            cost:this.state.quantityCost
+            cost: this.state.quantityCost
         };
 
         this.setState({
@@ -84,24 +88,30 @@ export default class Order extends Component {
             for (let i = 0; i < this.state.itemList.length; i++) {
                 totalOrderCost = totalOrderCost + this.state.itemList[i].cost;
             }
-
             this.setState({totalOrderCost: totalOrderCost})
         });
 
     };
 
-    createOrder = async () => {
-        const response = await fetch('/orderData', {
+    updateOrder = async (newItemList, totalOrderCost, orderID) => {
+        const response = await fetch('/orderData/update', {
             method: 'POST',
             headers: {
                 'Authorization': window.localStorage.getItem('authToken'),
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ itemList: this.state.itemList,totalOrderCost:this.state.totalOrderCost,status:false})
+            body: JSON.stringify({
+                itemList: newItemList,
+                totalOrderCost: totalOrderCost,
+                status: false,
+                orderID: orderID
+            })
         });
         const body = await response.json();
         if (body.success) {
-            //success saving data
+            console.log('success updating data');
+            //    this.state.setState({itemList:body.})
+
         } else {
             //error occurred
             //data not saved
@@ -110,17 +120,88 @@ export default class Order extends Component {
 
     };
 
+
+    createOrder = async () => {
+        const response = await fetch('/orderData/save', {
+            method: 'POST',
+            headers: {
+                'Authorization': window.localStorage.getItem('authToken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                itemList: this.state.itemList,
+                totalOrderCost: this.state.totalOrderCost,
+                status: false,
+                orderID: this.props.orderData.orderID
+            })
+        });
+        const body = await response.json();
+        if (body.success) {
+            //success saving data
+            //redirected to the dashboard view
+            this.props.handler();
+        } else {
+            //error occurred
+            //data not saved
+            //unsuccessful might be JWT expire
+        }
+
+    };
+
+    acceptQuantityChange = (itemID, itemPrice) => {
+        console.log('in');
+        //go through the loop, locate the value and save in the database
+        //locate from ItemList and update the value and save in the database
+        if (this.props.orderData) {
+            for (let i = 0; i < this.state.itemList.length; i++) {
+                if (this.state.itemList[i].name === itemID) {
+                    let updatedItemList = this.state.itemList;
+                    let updatedItemCost = this.state.quantity * itemPrice;
+                    updatedItemList[i].quantity = this.state.quantity;
+                    let newOrderCost = this.props.orderData.cost - updatedItemList[i].cost + updatedItemCost;
+                    updatedItemList[i].cost = updatedItemCost;
+                    this.updateOrder(updatedItemList, newOrderCost, this.props.orderData.orderID);
+                    break;
+                }
+            }
+        }
+
+
+    };
+
     //set total quantityCost for item * price
+    handleCostChange = (e, value) => {
+        if (this.handleQuantityChange(e, value)) {
+            let totalCost = parseInt(e.target.value) * parseInt(this.state.price);
+            this.setState({quantityCost: totalCost})
+        }
+    };
+
     handleQuantityChange = (e, value) => {
-        let quantityVal = parseInt(e.target.value);
-        if (!isNaN(quantityVal)) {
-            if ((quantityVal < 101 && quantityVal > 0)) {
-                this.setState({quantity: e.target.value});
-                let totalCost = parseInt(e.target.value) * parseInt(this.state.price);
-                this.setState({quantityCost: totalCost})
+        let quantity = parseInt(e.target.value);
+        if (!isNaN(quantity)) {
+            if ((quantity < 101 && quantity > 0)) {
+                this.setState({quantity: quantity});
+                return true;
             } else {
                 alert('Enter number of items quantity between 1-100');
             }
+        }
+    };
+
+//handle total cost of the order and order view while removing items from the order
+    handleItemDelete(key) {
+        for (let i = 0; i < this.state.itemList.length; i++) {
+            if (key === this.state.itemList[i].name) {
+                var array = [...this.state.itemList]; // make a separate copy of the array
+                var itemQuantityCost = this.state.itemList[i].cost;
+                array.splice(i, 1);
+                this.setState({itemList: array}, () => {
+                    var balance = this.state.totalOrderCost - itemQuantityCost;
+                    this.setState({totalOrderCost: balance})
+                });
+            }
+
         }
     };
 
@@ -142,13 +223,15 @@ export default class Order extends Component {
 
             //drop down //price per item //Quantity //add the item
 
-            <div className="ui very padded segment">
+            <div className="ui very padded segment" style={{'margin-bottom':'100px'}}>
+                <button className="ui icon right floated button" onClick={ this.props.handler}>
+                    <i aria-hidden="true" className="close icon"/>
+                </button>
                 <div className="ui basic segment">
-                    <h2 style={{'textAlign': 'center'}}>Create Order</h2>
+                    <h2 style={{'textAlign': 'center'}}>Create Order - {this.props.orderData.orderID}</h2>
                     <div className="ui horizontal divider">
                         <i className="icon cart plus"></i>
                     </div>
-
                     <div style={divStyle1}>
                         <Dropdown placeholder='Select Item' fluid search selection options={this.state.itemData}
                                   onChange={this.handleItemChange}/>
@@ -161,7 +244,7 @@ export default class Order extends Component {
                     <div style={divStyle}>
                         <div className="ui input">
                             <input type="number" placeholder="Quantity" defaultValue={this.state.quantity}
-                                   onChange={this.handleQuantityChange}/></div>
+                                   onChange={this.handleCostChange}/></div>
                     </div>
                     <div style={divStyle}>
                         <div className="ui tag labels">
@@ -196,20 +279,30 @@ export default class Order extends Component {
                                 {row.price}
                             </Table.Cell>
                             <Table.Cell textAlign='center'>
-                                {row.quantity}
+                                <div className="ui input">
+                                    <input type="number" placeholder="Quantity" defaultValue={row.quantity}
+                                           onChange={this.handleQuantityChange}/>
+                                    <button className="ui positive button"
+                                            onClick={() => this.acceptQuantityChange(row.name, row.price)}>
+                                        <i className="check icon"></i>
+                                    </button>
+                                </div>
+
                             </Table.Cell>
                             <Table.Cell textAlign='center'>
-                                {row.cost}
+                                Rs. {row.cost}.00
                             </Table.Cell>
                             <Table.Cell textAlign='center'>
-                                <i className="trash icon"></i>
+                                <button onClick={() => this.handleItemDelete(row.name)}>
+                                    <i className="trash icon"></i>
+                                </button>
                             </Table.Cell>
                         </Table.Row>)}
                         <Table.Row>
                             <Table.Cell></Table.Cell>
                             <Table.Cell></Table.Cell>
                             <Table.Cell textAlign='right'> Total Cost </Table.Cell>
-                            <Table.Cell textAlign='center'>{this.state.totalOrderCost}</Table.Cell>
+                            <Table.Cell textAlign='center'>Rs. {this.state.totalOrderCost}.00</Table.Cell>
                             <Table.Cell></Table.Cell>
                         </Table.Row>
                     </Table.Body>

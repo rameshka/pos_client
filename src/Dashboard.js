@@ -7,7 +7,7 @@ import {
 } from 'semantic-ui-react'
 
 import OrderTable from './OrderTable/OrderTable'
-import Order from './Order/Order'
+import Order, {history} from './Order/Order'
 import {Button} from 'semantic-ui-react'
 
 class OrderDashBoard extends Component {
@@ -15,19 +15,49 @@ class OrderDashBoard extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            showComponent: false,
+            liveComponent: false,
+            orderID: '',
+            random: ''
         };
+        this.triggerOrder = this.triggerOrder.bind(this);
         this.viewComponent = this.viewComponent.bind(this);
-
     }
 
-    viewComponent = function () {
-        if (!this.state.showComponent) {
-            this.setState({showComponent: true});
+    fetchData = async () => {
+        const response = await fetch('/orderData/getMax', {
+            method: 'GET',
+            headers: {
+                'Authorization': window.localStorage.getItem('authToken'),
+            },
+        });
+        const body = await response.json();
+        if (!body.success) {
+            window.localStorage.removeItem('authToken');
+            history.push('/login');
         } else {
-            this.setState({showComponent: false});
-        }
 
+            return body.orderID;
+        }
+    };
+
+    triggerOrder = () => {
+        this.fetchData()
+            .then(res => {
+                this.setState({orderID: res}, () => this.viewComponent())
+            })
+            .catch(err => console.log(err));
+    };
+
+    viewComponent = () => {
+        if (!this.state.liveComponent) {
+            this.setState({
+                liveComponent: <Order handler={this.viewComponent} orderData={{orderID: this.state.orderID}}/>
+            });
+        } else {
+            this.setState({liveComponent: false});
+            console.log(Math.random());
+            this.setState({random: Math.random()})
+        }
     };
 
     render() {
@@ -58,11 +88,13 @@ class OrderDashBoard extends Component {
                         </Dropdown>
                     </Container>
                 </Menu>
-                //TODO button should also hide
-{/*                <Button size='massive' circular color='red' icon='add circle'
-                        floated='right' onClick={this.viewComponent}></Button>*/}
-                <Order/>
-                {/*     {this.state.showComponent ? <Order/>:<OrderTable/>}*/}
+                {this.state.liveComponent}
+                <Button style={{position: 'absolute', bottom: '30px', right: '30px'}} size='massive' circular
+                        color='red'
+                        icon='add circle' floated='right'
+                        onClick={this.triggerOrder}>
+                </Button>
+                <OrderTable key={this.state.random}/>,
             </div>
         )
     }
